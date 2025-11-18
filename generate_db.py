@@ -3,6 +3,8 @@ from pathlib import Path
 import argparse
 import sqlite3
 
+import json
+
 def generate_db(args):
     """save a .sqlite db from a csv or json"""
     suffix = args.data_path.suffix
@@ -10,9 +12,9 @@ def generate_db(args):
     if suffix == ".csv":
         df = pd.read_csv(args.data_path)
     elif suffix == ".json":
-        df = pd.read_json(args.data_path)
-        import ipdb
-        ipdb.set_trace()
+        df = pd.read_json(args.data_path, lines=True, dtype=False)
+        obj_cols = df.select_dtypes(include=['object']).columns
+        df[obj_cols] = df[obj_cols].astype('string')
     else:
         raise NotImplementedError(f"{suffix} data types are not implemented yet. sry")
 
