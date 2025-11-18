@@ -1,9 +1,11 @@
 from llama_cpp import Llama
 
-def initialize_model():
+def initialize_model(
+    model_name: str="Qwen/Qwen2-7B-Instruct-GGUF",
+):
     """return a pretrained llm from huggingface."""
     llm = Llama.from_pretrained(
-        repo_id="Qwen/Qwen2-7B-Instruct-GGUF",
+        repo_id=model_name,
         filename="*q4_k_m.gguf",
         n_ctx=2048,
         n_gpu_layers=-1,
@@ -60,4 +62,5 @@ def main():
 
 
 if __name__ == "__main__":
+    model_name = "Qwen/Qwen2.5-3B-Instruct-GGUF"
     main()
