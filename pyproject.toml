@@ -8,4 +8,6 @@ dependencies = [
     "huggingface-hub>=1.1.4",
     "ipdb>=0.13.13",
     "llama-cpp-python>=0.3.16",
+    "pandas>=2.3.3",
+    "pathlib>=1.0.1",
 ]

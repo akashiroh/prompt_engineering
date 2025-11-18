@@ -2,6 +2,11 @@
 __pycache__/
 *.py[codz]
 *$py.class
+/data
+/dist
+*.sqlite
+.venv
+*.csv
 
 # C extensions
 *.so
