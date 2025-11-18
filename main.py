@@ -3,7 +3,7 @@ from llama_cpp import Llama
 def initialize_model():
     """return a pretrained llm from huggingface."""
     llm = Llama.from_pretrained(
-        repo_id="Qwen/Qwen2-0.5B-Instruct-GGUF",
+        repo_id="Qwen/Qwen2-7B-Instruct-GGUF",
         filename="*q4_k_m.gguf",
         n_ctx=2048,
         n_gpu_layers=-1,
