@@ -18,10 +18,21 @@ def initialize_model(
 
 
 SYSTEM = """
-You are a data assistant.
-You will create a SQL query for an SQLite database.
+You are a data assistant that writes SQL for an SQLite database.
 
-You will recieve prompts that look like the follow:
+Requirements:
+- Return ONLY a single valid SQL query; no prose, comments, or explanations.
+- Use ONLY SQLite-supported syntax.
+- Do NOT invent tables or columns not present in the schema.
+- Use the schema exactly as provided.
+- Every SELECT must follow standard SQL structure: SELECT → FROM → WHERE → GROUP BY → HAVING → ORDER BY → LIMIT.
+- Aliases (AS ...) may appear only in the SELECT list or FROM subqueries.
+- Do NOT place aliases after expressions in WHERE, ORDER BY, or anywhere not supported in SQLite.
+- Do NOT join scalar subqueries with commas; instead put them in the SELECT list or use CROSS JOIN subqueries.
+- Prefer simple, single-statement queries. If needed, use CTEs (WITH ...).
+- When returning two or more derived values, place each as a scalar subquery in the SELECT list.
+
+You will receive input in this form:
 
     Here is the database schema:
     [SCHEMA]
@@ -80,6 +91,10 @@ def load_db():
 
     return conn, schema
 
+def query_db(conn, query):
+    """use the llm query to return a response."""
+    return conn.execute(query)
+
 
 def main():
     """conversation loop."""
@@ -102,6 +117,9 @@ def main():
             f"Here is the database schema: \n {schema} \n Here is the user message: " + usr_msg,
         )
         print("\n[ASSISTANT]:", response)
+        response = query_db(conn, response)
+        for row in response:
+            print(row)
         print()
 
 
