@@ -9,6 +9,26 @@ This tasks is to develop a simple chatbot that can help me decide; it will have 
 
 I am using the [yelp open dataset](https://business.yelp.com/data/resources/open-dataset/) as a teaching aid to structure my own entries to a database.
 
+## Example Usage of SQL LLM
+```
+Downloaded model [Qwen/Qwen2-7B-Instruct-GGUF] from huggingface hub
+
+Query the LLM.
+[USER]: What restaurant chain has the most helpful staff?
+
+[ASSISTANT]: SELECT T1.name
+FROM business AS T1
+JOIN review AS T2 ON T1.business_id = T2.business_id
+WHERE T1.categories LIKE '%restaurant%'
+GROUP BY T1.name
+ORDER BY SUM(T2.useful + T2.funny + T2.cool) DESC
+LIMIT 1;
+
+[SQL QUERY RESULT]:
+Lulou's Restaurant
+Query took 26.898 seconds
+```
+
 ## Evaluations
 
 ### Accuracy
