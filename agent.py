@@ -9,27 +9,21 @@ import time
 from llm import LLMAgent
 
 def initialize_model(
-    model_name: str="Qwen/Qwen2-7B-Instruct-GGUF",
+    model_dir: str,
+    model_name: str,
     n_ctx: int=2048,
 ):
     """return a pretrained llm from huggingface."""
 
-    try:
-        path = hf_hub_download(
-            repo_id=model_name,
-            filename="qwen2-7b-instruct-q4_k_m.gguf",
-        )
-        llm = Llama(model_path=path)
-        print(f"Loaded model [{model_name}] from cache")
-    except:
-        llm = Llama.from_pretrained(
-            repo_id=model_name,
-            filename="*q4_k_m.gguf",
-            n_ctx=n_ctx,
-            n_gpu_layers=-1,
-            verbose=False,
-        )
-        print(f"Downloaded model [{model_name}] from huggingface hub")
+    llm = Llama.from_pretrained(
+        repo_id=model_dir,
+        filename=model_name,
+        n_ctx=n_ctx,
+        n_gpu_layers=-1,
+        verbose=False,
+    )
+    print(f"Downloaded model [{model_name}] from huggingface hub [{model_dir}]")
+
     return llm
 
 def load_db(db_name):
@@ -73,7 +67,10 @@ def main(args):
         examples += f"TABLE {name} \n"
         examples += f"Examples: \n {'\n'.join(map(str, response))} \n"
 
-    llm = initialize_model(args.model)
+    llm = initialize_model(
+        args.model_dir,
+        args.model_name,
+    )
 
     agents = {}
     with open("preconditions.yaml") as f:
@@ -107,9 +104,14 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Create a SQLite DB from a CSV or JSON.")
 
     parser.add_argument(
-        "-m", "--model", type=str,
+        "-m", "--model-dir", type=str,
         default="Qwen/Qwen2-7B-Instruct-GGUF",
-        help="HuggingFace Model",
+        help="HuggingFace Model Dir",
+    )
+    parser.add_argument(
+        "-n", "--model-name", type=str,
+        default="qwen2-7b-instruct-q4_k_m.gguf",
+        help="HuggingFace Model Name",
     )
     parser.add_argument(
         "-d", "--database", type=Path,
