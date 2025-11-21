@@ -7,6 +7,7 @@ import json
 
 def generate_db(args):
     """save a .sqlite db from a csv or json"""
+
     suffix = args.data_path.suffix
 
     if suffix == ".csv":
@@ -32,7 +33,7 @@ def parse_args():
     """parse dem args."""
     parser = argparse.ArgumentParser(description="Create a SQLite DB from a CSV or JSON.")
 
-    parser.add_argument("-d", "--data-path", type=Path, help="/path/to/*.{csv, json}")
+    parser.add_argument("-d", "--data-path", type=Path, help="/path/to/{dir, *.{csv, json}}")
     parser.add_argument("-o", "--save-path", type=Path, help="/path/to/save/*.sqlite")
     parser.add_argument("-n", "--name", type=str , help="name of table in database")
 
