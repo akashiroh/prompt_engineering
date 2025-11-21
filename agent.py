@@ -74,10 +74,6 @@ def main():
 
     while usr_msg != " ":
         usr_msg = input()
-        if usr_msg == "DEBUG":
-            import ipdb
-            ipdb.set_trace()
-            continue
 
         sql_query = agents["sql-llm"].chat(
             f"Here is the database schema: \n [{schema}] [{examples}] \n Here is the user message: " + usr_msg,
