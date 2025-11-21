@@ -12,11 +12,12 @@ Requirements:
 - Do NOT join scalar subqueries with commas; instead put them in the SELECT list or use CROSS JOIN subqueries.
 - Prefer simple, single-statement queries. If needed, use CTEs (WITH ...).
 - When returning two or more derived values, place each as a scalar subquery in the SELECT list.
+- The database can have multiple tables, determine which one is most helpful based on their contents.
 
 You will receive input in this form:
 
-    Here is the database schema:
-    [SCHEMA]
+    Here are the database schemas:
+    [SCHEMAS]
 
     [EXAMPLE ROWS IN DATABASE]
 
