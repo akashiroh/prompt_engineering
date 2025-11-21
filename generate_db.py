@@ -22,7 +22,7 @@ def generate_db(args):
         else:
             raise NotImplementedError(f"{suffix} data types are not implemented yet. sry")
 
-        df.to_sql(args.name, conn, if_exists="replace", index=False)
+        df.to_sql(table_name, conn, if_exists="replace", index=False)
 
         data_short_path = Path(*file_name.parts[-3:])
         save_short_path = Path(*args.save_to.parts[-3:])
