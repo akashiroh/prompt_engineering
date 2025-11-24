@@ -18,8 +18,8 @@ class LLMAgent():
 
         if self.with_history:
             prompt = [{"role": "system", "content": self.precondition,}]
-            prompt |= self.history
-            prompt |= [{"role": "user", "content": usr_msg,}]
+            prompt.extend(self.history)
+            prompt.append({"role": "user", "content": usr_msg,})
         else:
             prompt = [
                 {"role": "system", "content": self.precondition,},
@@ -33,6 +33,6 @@ class LLMAgent():
 
         answer = result["choices"][0]["message"]
         if self.with_history:
-            history.append(answer)
+            self.history.append(answer)
 
         return answer["content"]

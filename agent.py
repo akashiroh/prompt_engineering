@@ -69,6 +69,7 @@ def main(args):
     conn, schemas, schema_str, examples = load_db(
         db_name=args.database,
     )
+    vprint(f"Connecting to SQLITE database: [{args.database.name}]", args.verbose)
 
     llm = initialize_model(
         model_dir=args.model_dir,
@@ -80,8 +81,8 @@ def main(args):
     with open("preconditions.yaml") as f:
         preconditions = yaml.safe_load(f)
         agents["sql-llm"] = LLMAgent(llm, preconditions["sql-llm"])
-        agents["toolkit-llm"] = LLMAgent(llm, preconditions["toolkit-llm"])
-        agents["assistant-llm"] = LLMAgent(llm, preconditions["assistant-llm"])
+        agents["toolkit-llm"] = LLMAgent(llm, preconditions["toolkit-llm"], with_history=True)
+        agents["assistant-llm"] = LLMAgent(llm, preconditions["assistant-llm"], with_history=True)
 
     print("Query the LLM.")
     usr_msg = None
@@ -92,33 +93,38 @@ def main(args):
         sql_required = agents["toolkit-llm"].chat(
             f"Here are the database schemas: \n [{schema_str}] \n Here is the user message: " + usr_msg,
         )
+        vprint(f"\n[TOOKIT]: \n{sql_required}", args.verbose)
 
         if '"needs_sql": true' in sql_required:
+            vprint(f"SQL required to answer: {usr_msg}", args.verbose)
+
             sql_query = agents["sql-llm"].chat(
                 f"Database Schemas\n{schema_str}\n\nExamples\n{examples}\n\nSQL JSON\n{sql_required}\n\nUser Message\n{usr_msg}"
             )
-            print("\n[SQL]:", sql_query)
+            vprint(f"\n[SQL]: \n{sql_query}", args.verbose)
 
+            start_time = time.time()
             sql_response = query_db(conn, sql_query)
             sql_response_str = "\n".join(
                 [" ".join(map(str, row)) for row in sql_response]
             )
-            print("\n[DB RESULTS]", sql_response_str)
+            end_time = time.time()
+            vprint(f"\n[DB RESULTS]: \n{sql_response_str}", args.verbose)
+            vprint(f"SQLITE query took {end_time - start_time:.2f} seconds.", args.verbose)
 
             natural_answer = agents["assistant-llm"].chat(
                 f"User Question\n{usr_msg}\n\nQuery Output\n{sql_response_str}"
             )
-            print("\n[ASSISTANT]:", natural_answer)
+            print(f"\n[ASSISTANT]: {natural_answer}")
 
         else:
+            vprint(f"SQL NOT required to answer: {usr_msg}", args.verbose)
             natural_answer = agents["assistant-llm"].chat(
                 f"User Question\n{usr_msg}\nSQL was not required.\n"
             )
-            print("\n[ASSISTANT]:", natural_answer)
+            print(f"\n[ASSISTANT]: {natural_answer}")
 
         print()
-        import ipdb
-        ipdb.set_trace()
 
 
 def parse_args():
@@ -145,9 +151,19 @@ def parse_args():
         default="/research/hutchinson/workspace/holmesa8/data/.cache/huggingface",
         help="/path/to/.cache/huggingface",
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="verbose mode: print intermediate queries and steps.",
+    )
 
     args = parser.parse_args()
     return args
+
+
+def vprint(msg, verbose=False):
+    if verbose:
+        print(msg)
+
 
 if __name__ == "__main__":
     args = parse_args()
