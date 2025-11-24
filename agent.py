@@ -11,13 +11,15 @@ from llm import LLMAgent
 def initialize_model(
     model_dir: str,
     model_name: str,
-    n_ctx: int=2048,
+    n_ctx: int=4096,
+    cache_dir: Path=None,
 ):
     """return a pretrained llm from huggingface."""
 
     llm = Llama.from_pretrained(
         repo_id=model_dir,
         filename=model_name,
+        cache_dir=cache_dir,
         n_ctx=n_ctx,
         n_gpu_layers=-1,
         verbose=False,
@@ -46,7 +48,14 @@ def load_db(db_name):
         schemas[table_name] = schema
 
     schema_str =  "\n\n".join(schemas.values())
-    return conn, schemas, schema_str
+
+    examples = ""
+    for name in schemas.keys():
+        response = conn.execute("SELECT * FROM business LIMIT 3;")
+        examples += f"TABLE {name} \n"
+        examples += f"Examples: \n {'\n'.join(map(str, response))} \n"
+
+    return conn, schemas, schema_str, examples
 
 def query_db(conn, query):
     """use the llm query to return a response."""
@@ -57,25 +66,22 @@ def main(args):
     """conversation loop."""
 
     # load database(s)
-    conn, schemas, schema_str = load_db(
+    conn, schemas, schema_str, examples = load_db(
         db_name=args.database,
     )
 
-    examples = ""
-    for name in schemas.keys():
-        response = conn.execute("SELECT * FROM business LIMIT 3;")
-        examples += f"TABLE {name} \n"
-        examples += f"Examples: \n {'\n'.join(map(str, response))} \n"
-
     llm = initialize_model(
-        args.model_dir,
-        args.model_name,
+        model_dir=args.model_dir,
+        model_name=args.model_name,
+        cache_dir=args.cache_dir,
     )
 
     agents = {}
     with open("preconditions.yaml") as f:
         preconditions = yaml.safe_load(f)
         agents["sql-llm"] = LLMAgent(llm, preconditions["sql-llm"])
+        agents["toolkit-llm"] = LLMAgent(llm, preconditions["toolkit-llm"])
+        agents["assistant-llm"] = LLMAgent(llm, preconditions["assistant-llm"])
 
     print("Query the LLM.")
     usr_msg = None
@@ -83,20 +89,36 @@ def main(args):
     while usr_msg != " ":
         usr_msg = input()
 
-        sql_query = agents["sql-llm"].chat(
+        sql_required = agents["toolkit-llm"].chat(
             f"Here are the database schemas: \n [{schema_str}] \n Here is the user message: " + usr_msg,
         )
-        print("\n[ASSISTANT]:", sql_query)
 
-        start_time = time.time()
-        sql_response = query_db(conn, sql_query)
-        end_time = time.time()
+        if '"needs_sql": true' in sql_required:
+            sql_query = agents["sql-llm"].chat(
+                f"Database Schemas\n{schema_str}\n\nExamples\n{examples}\n\nSQL JSON\n{sql_required}\n\nUser Message\n{usr_msg}"
+            )
+            print("\n[SQL]:", sql_query)
 
-        response = " | ".join([r[0] for r in sql_response])
-        print(response)
-        print(f"Query took {end_time - start_time:.3f} seconds")
+            sql_response = query_db(conn, sql_query)
+            sql_response_str = "\n".join(
+                [" ".join(map(str, row)) for row in sql_response]
+            )
+            print("\n[DB RESULTS]", sql_response_str)
+
+            natural_answer = agents["assistant-llm"].chat(
+                f"User Question\n{usr_msg}\n\nQuery Output\n{sql_response_str}"
+            )
+            print("\n[ASSISTANT]:", natural_answer)
+
+        else:
+            natural_answer = agents["assistant-llm"].chat(
+                f"User Question\n{usr_msg}\nSQL was not required.\n"
+            )
+            print("\n[ASSISTANT]:", natural_answer)
 
         print()
+        import ipdb
+        ipdb.set_trace()
 
 
 def parse_args():
@@ -117,6 +139,11 @@ def parse_args():
         "-d", "--database", type=Path,
         default="/research/hutchinson/workspace/holmesa8/data/sqlite/yelp.sqlite",
         help="/path/to/*sqlite",
+    )
+    parser.add_argument(
+        "-c", "--cache_dir", type=Path,
+        default="/research/hutchinson/workspace/holmesa8/data/.cache/huggingface",
+        help="/path/to/.cache/huggingface",
     )
 
     args = parser.parse_args()
